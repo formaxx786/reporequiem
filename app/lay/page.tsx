@@ -14,6 +14,7 @@ export default function LayRepoPage() {
     cause: "Burnout",
     lesson: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
   function handleChange(
     e: React.ChangeEvent<
@@ -26,7 +27,7 @@ export default function LayRepoPage() {
     });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     if (!form.lesson.trim()) {
@@ -34,43 +35,49 @@ export default function LayRepoPage() {
       return;
     }
 
-    const existing = JSON.parse(
-      localStorage.getItem("reporequiem_graves") || "[]"
-    );
+    if (!form.repo.trim()) {
+      alert("Repository name is required.");
+      return;
+    }
 
-    const newGrave = {
-      id: Date.now().toString(),
-      ...form,
-      createdAt: new Date().toISOString(),
-    };
+    setSubmitting(true);
 
-    localStorage.setItem(
-      "reporequiem_graves",
-      JSON.stringify([newGrave, ...existing])
-    );
+    try {
+      const response = await fetch("/api/graves", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
 
-    router.push("/success");
+      if (!response.ok) {
+        const errorBody = (await response.json()) as { error?: string };
+        throw new Error(errorBody.error || "Unable to lay this repo to rest.");
+      }
+
+      router.push("/success");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <main className="max-w-3xl mx-auto px-6 mt-28">
-      {/* TITLE */}
       <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
         Lay a Repo to Rest
       </h1>
 
       <p className="mt-4 max-w-xl text-sm leading-relaxed text-[var(--color-muted)]">
-        This is a quiet place to reflect on an unfinished project and
-        leave behind what it taught you.
+        This is a quiet place to reflect on an unfinished project and leave behind what it taught
+        you.
       </p>
 
-      {/* FORM */}
       <form onSubmit={handleSubmit} className="mt-14 space-y-10">
-        {/* Repo name */}
         <div>
-          <label className="block text-sm mb-2">
-            Repository name
-          </label>
+          <label className="block text-sm mb-2">Repository name</label>
           <input
             name="repo"
             value={form.repo}
@@ -84,11 +91,8 @@ export default function LayRepoPage() {
           />
         </div>
 
-        {/* Description */}
         <div>
-          <label className="block text-sm mb-2">
-            What were you trying to build?
-          </label>
+          <label className="block text-sm mb-2">What were you trying to build?</label>
           <textarea
             name="description"
             value={form.description}
@@ -103,11 +107,8 @@ export default function LayRepoPage() {
           />
         </div>
 
-        {/* Tech stack */}
         <div>
-          <label className="block text-sm mb-2">
-            Tech stack
-          </label>
+          <label className="block text-sm mb-2">Tech stack</label>
           <input
             name="tech"
             value={form.tech}
@@ -121,11 +122,8 @@ export default function LayRepoPage() {
           />
         </div>
 
-        {/* Time */}
         <div>
-          <label className="block text-sm mb-2">
-            Time spent
-          </label>
+          <label className="block text-sm mb-2">Time spent</label>
           <select
             name="time"
             value={form.time}
@@ -142,11 +140,8 @@ export default function LayRepoPage() {
           </select>
         </div>
 
-        {/* Cause */}
         <div>
-          <label className="block text-sm mb-2">
-            Cause of death
-          </label>
+          <label className="block text-sm mb-2">Cause of death</label>
           <select
             name="cause"
             value={form.cause}
@@ -163,13 +158,9 @@ export default function LayRepoPage() {
           </select>
         </div>
 
-        {/* FINAL LESSON */}
         <div>
           <label className="block text-sm mb-2">
-            Final lesson{" "}
-            <span className="text-[var(--color-muted)]">
-              (required)
-            </span>
+            Final lesson <span className="text-[var(--color-muted)]">(required)</span>
           </label>
           <textarea
             name="lesson"
@@ -186,17 +177,17 @@ export default function LayRepoPage() {
           />
         </div>
 
-        {/* SUBMIT */}
         <div className="pt-2">
           <button
             type="submit"
+            disabled={submitting}
             className="inline-flex items-center
                        bg-[var(--color-accent)]
                        text-[var(--color-bg)]
                        px-6 py-3 rounded-md
-                       font-semibold transition hover:opacity-90"
+                       font-semibold transition hover:opacity-90 disabled:opacity-60"
           >
-            Lay This Repo to Rest
+            {submitting ? "Laying to rest..." : "Lay This Repo to Rest"}
           </button>
         </div>
       </form>
